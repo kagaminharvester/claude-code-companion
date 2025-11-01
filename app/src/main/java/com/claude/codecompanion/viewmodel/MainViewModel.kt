@@ -140,19 +140,41 @@ class MainViewModel : ViewModel() {
 
     private fun getDefaultCommands(): List<Command> {
         return listOf(
+            // Claude Code Commands
+            Command("claude1", "Start Claude Session", "cd \$CLAUDE_DIR && claude", "Start interactive Claude Code session", CommandCategory.CLAUDE, true),
+            Command("claude2", "Claude Task", "cd \$CLAUDE_DIR && claude task 'your task here'", "Execute a Claude task", CommandCategory.CLAUDE, true),
+            Command("claude3", "Claude MCP List", "cd \$CLAUDE_DIR && claude mcp list", "List MCP servers", CommandCategory.CLAUDE),
+            Command("claude4", "Claude Status", "cd \$CLAUDE_DIR && ps aux | grep claude", "Check if Claude is running", CommandCategory.CLAUDE),
+            Command("claude5", "Claude Version", "claude --version", "Check Claude Code version", CommandCategory.CLAUDE),
+
+            // Git Commands
             Command("1", "Git Status", "git status", "Check repository status", CommandCategory.GIT, true),
             Command("2", "Git Log", "git log --oneline -10", "View recent commits", CommandCategory.GIT),
+            Command("7", "Git Diff", "git diff", "View changes", CommandCategory.GIT),
+            Command("8", "Pull", "git pull", "Pull latest changes", CommandCategory.GIT),
+
+            // File Operations
             Command("3", "List Files", "ls -la", "List all files", CommandCategory.FILE_OPERATIONS),
             Command("4", "Search Code", "grep -r 'pattern' .", "Search in codebase", CommandCategory.SEARCH),
-            Command("5", "Build", "npm run build", "Build the project", CommandCategory.BUILD, true),
-            Command("6", "Test", "npm test", "Run tests", CommandCategory.TEST, true),
-            Command("7", "Git Diff", "git diff", "View changes", CommandCategory.GIT),
-            Command("8", "Pull", "git pull", "Pull latest changes", CommandCategory.GIT)
+
+            // Build & Test
+            Command("5", "Build", "npm run build", "Build the project", CommandCategory.BUILD),
+            Command("6", "Test", "npm test", "Run tests", CommandCategory.TEST)
         )
     }
 
     private fun getDefaultWorkflows(): List<Workflow> {
         return listOf(
+            Workflow(
+                "0",
+                "Claude Code Session",
+                "Start Claude Code in working directory",
+                listOf(
+                    WorkflowStep(1, "cd \$CLAUDE_DIR", emptyMap()),
+                    WorkflowStep(2, "claude --version", emptyMap()),
+                    WorkflowStep(3, "claude mcp list", emptyMap())
+                )
+            ),
             Workflow(
                 "1",
                 "Commit & Push",

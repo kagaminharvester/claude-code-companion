@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream
 
 class SSHManager {
     private var session: Session? = null
+    private var currentConfig: ConnectionConfig? = null
     private val jsch = JSch()
 
     suspend fun connect(config: ConnectionConfig): Result<String> = withContext(Dispatchers.IO) {
@@ -22,6 +23,7 @@ class SSHManager {
                 connect(10000)
             }
 
+            currentConfig = config
             Result.success("Connected to ${config.host}")
         } catch (e: Exception) {
             Result.failure(e)
@@ -38,9 +40,14 @@ class SSHManager {
             val outputStream = ByteArrayOutputStream()
             val errorStream = ByteArrayOutputStream()
 
+            // Replace $CLAUDE_DIR with the configured working directory
+            val processedCommand = currentConfig?.let {
+                command.replace("\$CLAUDE_DIR", it.claudeWorkDir)
+            } ?: command
+
             channel.outputStream = outputStream
             channel.setErrStream(errorStream)
-            channel.setCommand(command)
+            channel.setCommand(processedCommand)
             channel.connect(5000)
 
             while (!channel.isClosed) {

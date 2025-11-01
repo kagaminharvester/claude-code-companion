@@ -46,6 +46,7 @@ enum class CommandCategory {
     SEARCH,
     BUILD,
     TEST,
+    CLAUDE,
     CUSTOM
 }
 
@@ -68,7 +69,8 @@ data class ConnectionConfig(
     val username: String = "",
     val password: String = "",
     val useKeyAuth: Boolean = false,
-    val privateKeyPath: String = ""
+    val privateKeyPath: String = "",
+    val claudeWorkDir: String = "/home/pi"
 )
 
 data class ConnectionState(

@@ -20,6 +20,7 @@ fun SettingsScreen(
     var port by remember { mutableStateOf(connectionConfig.port.toString()) }
     var username by remember { mutableStateOf(connectionConfig.username) }
     var password by remember { mutableStateOf(connectionConfig.password) }
+    var claudeWorkDir by remember { mutableStateOf(connectionConfig.claudeWorkDir) }
 
     Column(
         modifier = modifier
@@ -84,13 +85,37 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        Divider()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Claude Code Settings",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = claudeWorkDir,
+            onValueChange = { claudeWorkDir = it },
+            label = { Text("Claude Working Directory") },
+            placeholder = { Text("/home/pi/projects") },
+            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            supportingText = { Text("Directory where Claude Code operates") }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Button(
             onClick = {
                 val config = ConnectionConfig(
                     host = host,
                     port = port.toIntOrNull() ?: 22,
                     username = username,
-                    password = password
+                    password = password,
+                    claudeWorkDir = claudeWorkDir
                 )
                 onSaveConfig(config)
                 onConnect()
