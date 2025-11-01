@@ -18,12 +18,17 @@ import com.claude.codecompanion.data.ConnectionConfig
 import com.claude.codecompanion.ui.screens.*
 import com.claude.codecompanion.ui.theme.ClaudeCodeCompanionTheme
 import com.claude.codecompanion.viewmodel.MainViewModel
+import com.claude.codecompanion.utils.CrashLogger
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize crash logger
+        CrashLogger.initialize(this)
+
         setContent {
             ClaudeCodeCompanionTheme {
                 MainScreen(viewModel)
