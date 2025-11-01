@@ -42,8 +42,11 @@ fun MainScreen(viewModel: MainViewModel) {
     val commands by viewModel.commands.collectAsState()
     val workflows by viewModel.workflows.collectAsState()
     val commandOutput by viewModel.commandOutput.collectAsState()
+    val plugins by viewModel.plugins.collectAsState()
+    val customRepos by viewModel.customRepos.collectAsState()
 
     var connectionConfig by remember { mutableStateOf(ConnectionConfig()) }
+    var showCommandsDialog by remember { mutableStateOf<com.claude.codecompanion.data.MCPPlugin?>(null) }
 
     Scaffold(
         topBar = {
@@ -105,11 +108,22 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
 
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-                    label = { Text("Workflows") },
-                    selected = currentRoute == "workflows",
+                    icon = { Icon(Icons.Default.Extension, contentDescription = null) },
+                    label = { Text("Plugins") },
+                    selected = currentRoute == "plugins",
                     onClick = {
-                        navController.navigate("workflows") {
+                        navController.navigate("plugins") {
+                            popUpTo("dashboard")
+                        }
+                    }
+                )
+
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Settings") },
+                    selected = currentRoute == "settings",
+                    onClick = {
+                        navController.navigate("settings") {
                             popUpTo("dashboard")
                         }
                     }
@@ -180,36 +194,45 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 )
             }
+
+            composable("plugins") {
+                PluginMarketplaceScreen(
+                    plugins = plugins,
+                    customRepos = customRepos,
+                    onInstallPlugin = { plugin ->
+                        viewModel.installPlugin(plugin)
+                    },
+                    onUninstallPlugin = { plugin ->
+                        viewModel.uninstallPlugin(plugin)
+                    },
+                    onAddRepository = { name, url ->
+                        viewModel.addCustomRepository(name, url)
+                    },
+                    onViewCommands = { plugin ->
+                        showCommandsDialog = plugin
+                    }
+                )
+            }
+
+            composable("settings") {
+                SettingsScreen(
+                    connectionConfig = connectionConfig,
+                    onSaveConfig = { config ->
+                        connectionConfig = config
+                    },
+                    onConnect = {
+                        viewModel.connect(connectionConfig)
+                    }
+                )
+            }
         }
     }
 
-    // Settings FAB (Floating Action Button) overlay
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    if (currentRoute == "dashboard") {
-        var showSettings by remember { mutableStateOf(false) }
-
-        if (showSettings) {
-            AlertDialog(
-                onDismissRequest = { showSettings = false },
-                title = { Text("Connection Settings") },
-                text = {
-                    SettingsScreen(
-                        connectionConfig = connectionConfig,
-                        onSaveConfig = { config ->
-                            connectionConfig = config
-                            showSettings = false
-                        },
-                        onConnect = {
-                            viewModel.connect(connectionConfig)
-                        }
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = { showSettings = false }) {
-                        Text("Close")
-                    }
-                }
-            )
-        }
+    // Show plugin commands dialog
+    showCommandsDialog?.let { plugin ->
+        PluginCommandsDialog(
+            plugin = plugin,
+            onDismiss = { showCommandsDialog = null }
+        )
     }
 }

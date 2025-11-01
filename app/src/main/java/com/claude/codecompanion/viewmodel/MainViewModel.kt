@@ -30,6 +30,12 @@ class MainViewModel : ViewModel() {
     private val _commandOutput = MutableStateFlow("")
     val commandOutput: StateFlow<String> = _commandOutput.asStateFlow()
 
+    private val _plugins = MutableStateFlow(getDefaultPlugins())
+    val plugins: StateFlow<List<MCPPlugin>> = _plugins.asStateFlow()
+
+    private val _customRepos = MutableStateFlow<List<CustomRepository>>(emptyList())
+    val customRepos: StateFlow<List<CustomRepository>> = _customRepos.asStateFlow()
+
     fun connect(config: ConnectionConfig) {
         viewModelScope.launch {
             val result = sshManager.connect(config)
@@ -202,6 +208,241 @@ class MainViewModel : ViewModel() {
                 listOf(
                     WorkflowStep(1, "git pull", emptyMap()),
                     WorkflowStep(2, "npm install", emptyMap())
+                )
+            )
+        )
+    }
+
+    fun installPlugin(plugin: MCPPlugin) {
+        viewModelScope.launch {
+            val command = "claude mcp add --transport stdio ${plugin.packageName} -- npx -y ${plugin.packageName}"
+            executeCommand(command)
+
+            // Mark as installed
+            _plugins.value = _plugins.value.map {
+                if (it.id == plugin.id) it.copy(isInstalled = true) else it
+            }
+        }
+    }
+
+    fun uninstallPlugin(plugin: MCPPlugin) {
+        viewModelScope.launch {
+            val command = "claude mcp remove ${plugin.packageName}"
+            executeCommand(command)
+
+            // Mark as uninstalled
+            _plugins.value = _plugins.value.map {
+                if (it.id == plugin.id) it.copy(isInstalled = false) else it
+            }
+        }
+    }
+
+    fun addCustomRepository(name: String, url: String) {
+        val repo = CustomRepository(
+            id = System.currentTimeMillis().toString(),
+            name = name,
+            url = url
+        )
+        _customRepos.value = _customRepos.value + repo
+    }
+
+    private fun getDefaultPlugins(): List<MCPPlugin> {
+        return listOf(
+            MCPPlugin(
+                id = "1",
+                name = "Filesystem",
+                description = "Read, write, and manage files and directories. Provides comprehensive file operations including reading, writing, editing, searching, and directory management.",
+                packageName = "@modelcontextprotocol/server-filesystem",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.FILE_SYSTEM,
+                commands = listOf(
+                    PluginCommand("read_file", "Read complete file contents", listOf(
+                        CommandParameter("path", "string", "Path to the file")
+                    )),
+                    PluginCommand("write_file", "Create or overwrite a file", listOf(
+                        CommandParameter("path", "string", "Path to the file"),
+                        CommandParameter("content", "string", "File content")
+                    )),
+                    PluginCommand("edit_file", "Make line-based edits", listOf(
+                        CommandParameter("path", "string", "Path to the file"),
+                        CommandParameter("edits", "array", "Array of edit operations")
+                    )),
+                    PluginCommand("list_directory", "List directory contents", listOf(
+                        CommandParameter("path", "string", "Directory path")
+                    )),
+                    PluginCommand("search_files", "Search for files by pattern", listOf(
+                        CommandParameter("path", "string", "Search root path"),
+                        CommandParameter("pattern", "string", "Search pattern")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "2",
+                name = "GitHub",
+                description = "Interact with GitHub repositories, issues, and pull requests. Create repos, manage files, search code, handle issues and PRs.",
+                packageName = "@modelcontextprotocol/server-github",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.DEVELOPMENT,
+                commands = listOf(
+                    PluginCommand("create_repository", "Create a new GitHub repository", listOf(
+                        CommandParameter("name", "string", "Repository name"),
+                        CommandParameter("description", "string", "Repository description", false),
+                        CommandParameter("private", "boolean", "Make repository private", false)
+                    )),
+                    PluginCommand("get_file_contents", "Get file contents from a repository", listOf(
+                        CommandParameter("owner", "string", "Repository owner"),
+                        CommandParameter("repo", "string", "Repository name"),
+                        CommandParameter("path", "string", "File path")
+                    )),
+                    PluginCommand("create_issue", "Create a new issue", listOf(
+                        CommandParameter("owner", "string", "Repository owner"),
+                        CommandParameter("repo", "string", "Repository name"),
+                        CommandParameter("title", "string", "Issue title"),
+                        CommandParameter("body", "string", "Issue body", false)
+                    )),
+                    PluginCommand("create_pull_request", "Create a pull request", listOf(
+                        CommandParameter("owner", "string", "Repository owner"),
+                        CommandParameter("repo", "string", "Repository name"),
+                        CommandParameter("title", "string", "PR title"),
+                        CommandParameter("head", "string", "Head branch"),
+                        CommandParameter("base", "string", "Base branch")
+                    )),
+                    PluginCommand("search_code", "Search code across repositories", listOf(
+                        CommandParameter("q", "string", "Search query")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "3",
+                name = "Brave Search",
+                description = "Web search using Brave Search API. Perform web searches, local searches, and get diverse search results.",
+                packageName = "@modelcontextprotocol/server-brave-search",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.WEB,
+                commands = listOf(
+                    PluginCommand("brave_web_search", "Search the web", listOf(
+                        CommandParameter("query", "string", "Search query"),
+                        CommandParameter("count", "number", "Number of results", false)
+                    )),
+                    PluginCommand("brave_local_search", "Search for local businesses", listOf(
+                        CommandParameter("query", "string", "Local search query")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "4",
+                name = "Puppeteer",
+                description = "Browser automation using Puppeteer. Navigate websites, take screenshots, click elements, fill forms, and execute JavaScript.",
+                packageName = "@modelcontextprotocol/server-puppeteer",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.AUTOMATION,
+                commands = listOf(
+                    PluginCommand("puppeteer_navigate", "Navigate to a URL", listOf(
+                        CommandParameter("url", "string", "URL to navigate to")
+                    )),
+                    PluginCommand("puppeteer_screenshot", "Take a screenshot", listOf(
+                        CommandParameter("name", "string", "Screenshot name"),
+                        CommandParameter("selector", "string", "CSS selector", false)
+                    )),
+                    PluginCommand("puppeteer_click", "Click an element", listOf(
+                        CommandParameter("selector", "string", "CSS selector")
+                    )),
+                    PluginCommand("puppeteer_fill", "Fill an input field", listOf(
+                        CommandParameter("selector", "string", "CSS selector"),
+                        CommandParameter("value", "string", "Value to fill")
+                    )),
+                    PluginCommand("puppeteer_evaluate", "Execute JavaScript", listOf(
+                        CommandParameter("script", "string", "JavaScript code")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "5",
+                name = "PostgreSQL",
+                description = "Interact with PostgreSQL databases. Execute queries, manage schemas, and perform database operations.",
+                packageName = "@modelcontextprotocol/server-postgres",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.DATABASE,
+                commands = listOf(
+                    PluginCommand("query", "Execute SQL query", listOf(
+                        CommandParameter("sql", "string", "SQL query to execute")
+                    )),
+                    PluginCommand("list_tables", "List all tables", emptyList()),
+                    PluginCommand("describe_table", "Get table schema", listOf(
+                        CommandParameter("table", "string", "Table name")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "6",
+                name = "Slack",
+                description = "Integrate with Slack workspaces. Send messages, read channels, manage conversations.",
+                packageName = "@modelcontextprotocol/server-slack",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.AUTOMATION,
+                commands = listOf(
+                    PluginCommand("send_message", "Send a message to a channel", listOf(
+                        CommandParameter("channel", "string", "Channel ID"),
+                        CommandParameter("text", "string", "Message text")
+                    )),
+                    PluginCommand("list_channels", "List all channels", emptyList())
+                )
+            ),
+            MCPPlugin(
+                id = "7",
+                name = "Google Drive",
+                description = "Access and manage Google Drive files. Read, write, search, and organize files in Google Drive.",
+                packageName = "@modelcontextprotocol/server-gdrive",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.FILE_SYSTEM,
+                commands = listOf(
+                    PluginCommand("list_files", "List Drive files", listOf(
+                        CommandParameter("query", "string", "Search query", false)
+                    )),
+                    PluginCommand("read_file", "Read file contents", listOf(
+                        CommandParameter("file_id", "string", "File ID")
+                    )),
+                    PluginCommand("create_file", "Create a new file", listOf(
+                        CommandParameter("name", "string", "File name"),
+                        CommandParameter("content", "string", "File content")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "8",
+                name = "Memory",
+                description = "Persistent memory for Claude Code. Store and retrieve information across sessions.",
+                packageName = "@modelcontextprotocol/server-memory",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.AI_TOOLS,
+                commands = listOf(
+                    PluginCommand("store_memory", "Store a memory", listOf(
+                        CommandParameter("key", "string", "Memory key"),
+                        CommandParameter("value", "string", "Memory value")
+                    )),
+                    PluginCommand("retrieve_memory", "Retrieve a memory", listOf(
+                        CommandParameter("key", "string", "Memory key")
+                    )),
+                    PluginCommand("list_memories", "List all memories", emptyList())
+                )
+            ),
+            MCPPlugin(
+                id = "9",
+                name = "Arduino CLI",
+                description = "Arduino development tools. Compile, upload, and manage Arduino projects via CLI.",
+                packageName = "arduino-cli-mcp",
+                repository = "https://github.com/Shubhamai/arduino-cli-mcp",
+                category = PluginCategory.DEVELOPMENT,
+                commands = listOf(
+                    PluginCommand("compile", "Compile Arduino sketch", listOf(
+                        CommandParameter("sketch_path", "string", "Path to .ino file"),
+                        CommandParameter("fqbn", "string", "Board identifier")
+                    )),
+                    PluginCommand("upload", "Upload to board", listOf(
+                        CommandParameter("port", "string", "Serial port"),
+                        CommandParameter("fqbn", "string", "Board identifier")
+                    )),
+                    PluginCommand("list", "List boards", emptyList())
                 )
             )
         )

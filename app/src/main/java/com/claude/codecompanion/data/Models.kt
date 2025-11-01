@@ -78,3 +78,44 @@ data class ConnectionState(
     val message: String = "",
     val lastConnected: Long? = null
 )
+
+data class MCPPlugin(
+    val id: String,
+    val name: String,
+    val description: String,
+    val packageName: String,
+    val repository: String,
+    val category: PluginCategory,
+    val isInstalled: Boolean = false,
+    val commands: List<PluginCommand> = emptyList()
+)
+
+enum class PluginCategory {
+    FILE_SYSTEM,
+    WEB,
+    DATABASE,
+    AI_TOOLS,
+    DEVELOPMENT,
+    AUTOMATION,
+    CUSTOM
+}
+
+data class PluginCommand(
+    val name: String,
+    val description: String,
+    val parameters: List<CommandParameter>
+)
+
+data class CommandParameter(
+    val name: String,
+    val type: String,
+    val description: String,
+    val required: Boolean = true
+)
+
+data class CustomRepository(
+    val id: String,
+    val name: String,
+    val url: String,
+    val addedDate: Long = System.currentTimeMillis()
+)
