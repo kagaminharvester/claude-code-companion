@@ -36,6 +36,9 @@ release/
 .gradle/
 build/
 
+# Don't ignore gradle wrapper jar (needed for CI/CD)
+!gradle/wrapper/gradle-wrapper.jar
+
 # Local configuration file (sdk path, etc)
 local.properties
 
