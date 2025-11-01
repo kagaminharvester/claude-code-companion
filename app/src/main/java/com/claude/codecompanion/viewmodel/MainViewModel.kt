@@ -36,6 +36,12 @@ class MainViewModel : ViewModel() {
     private val _customRepos = MutableStateFlow<List<CustomRepository>>(emptyList())
     val customRepos: StateFlow<List<CustomRepository>> = _customRepos.asStateFlow()
 
+    private val _terminalLines = MutableStateFlow<List<com.claude.codecompanion.ui.screens.TerminalLine>>(emptyList())
+    val terminalLines: StateFlow<List<com.claude.codecompanion.ui.screens.TerminalLine>> = _terminalLines.asStateFlow()
+
+    private val _isExecuting = MutableStateFlow(false)
+    val isExecuting: StateFlow<Boolean> = _isExecuting.asStateFlow()
+
     fun connect(config: ConnectionConfig) {
         viewModelScope.launch {
             val result = sshManager.connect(config)
@@ -67,6 +73,40 @@ class MainViewModel : ViewModel() {
             val result = sshManager.executeCommand(command)
             _commandOutput.value = result.getOrNull() ?: result.exceptionOrNull()?.message ?: "Error"
         }
+    }
+
+    fun executeTerminalCommand(command: String) {
+        viewModelScope.launch {
+            _isExecuting.value = true
+
+            // Add command to terminal
+            _terminalLines.value = _terminalLines.value + com.claude.codecompanion.ui.screens.TerminalLine(
+                text = command,
+                type = com.claude.codecompanion.ui.screens.LineType.COMMAND
+            )
+
+            // Execute command
+            val result = sshManager.executeCommand(command)
+
+            // Add output to terminal
+            val output = result.getOrNull() ?: result.exceptionOrNull()?.message ?: "Error"
+            val lineType = if (result.isSuccess) {
+                com.claude.codecompanion.ui.screens.LineType.OUTPUT
+            } else {
+                com.claude.codecompanion.ui.screens.LineType.ERROR
+            }
+
+            _terminalLines.value = _terminalLines.value + com.claude.codecompanion.ui.screens.TerminalLine(
+                text = output,
+                type = lineType
+            )
+
+            _isExecuting.value = false
+        }
+    }
+
+    fun clearTerminal() {
+        _terminalLines.value = emptyList()
     }
 
     fun addTask(content: String, activeForm: String) {
@@ -146,26 +186,26 @@ class MainViewModel : ViewModel() {
 
     private fun getDefaultCommands(): List<Command> {
         return listOf(
-            // Claude Code Commands
-            Command("claude1", "Start Claude Session", "cd \$CLAUDE_DIR && claude", "Start interactive Claude Code session", CommandCategory.CLAUDE, true),
-            Command("claude2", "Claude Task", "cd \$CLAUDE_DIR && claude task 'your task here'", "Execute a Claude task", CommandCategory.CLAUDE, true),
-            Command("claude3", "Claude MCP List", "cd \$CLAUDE_DIR && claude mcp list", "List MCP servers", CommandCategory.CLAUDE),
-            Command("claude4", "Claude Status", "cd \$CLAUDE_DIR && ps aux | grep claude", "Check if Claude is running", CommandCategory.CLAUDE),
-            Command("claude5", "Claude Version", "claude --version", "Check Claude Code version", CommandCategory.CLAUDE),
+            // Core Claude Code Commands
+            Command("claude1", "Start Claude REPL", "cd \$CLAUDE_DIR && claude", "Start interactive Claude Code session", CommandCategory.CLAUDE, true),
+            Command("claude2", "Query & Exit", "cd \$CLAUDE_DIR && claude -p \"your query here\"", "Query via SDK then exit", CommandCategory.CLAUDE, true),
+            Command("claude3", "Resume Session", "cd \$CLAUDE_DIR && claude -c", "Resume most recent conversation", CommandCategory.CLAUDE),
+            Command("claude4", "Continue with Query", "cd \$CLAUDE_DIR && claude -c -p \"your query\"", "Continue previous session with new query", CommandCategory.CLAUDE),
+            Command("claude5", "Update Claude", "claude update", "Update Claude Code to latest version", CommandCategory.CLAUDE),
 
-            // Git Commands
-            Command("1", "Git Status", "git status", "Check repository status", CommandCategory.GIT, true),
-            Command("2", "Git Log", "git log --oneline -10", "View recent commits", CommandCategory.GIT),
-            Command("7", "Git Diff", "git diff", "View changes", CommandCategory.GIT),
-            Command("8", "Pull", "git pull", "Pull latest changes", CommandCategory.GIT),
+            // MCP Management
+            Command("mcp1", "List MCP Servers", "claude mcp list", "Show all installed MCP servers", CommandCategory.CLAUDE),
+            Command("mcp2", "Add MCP Server", "claude mcp add --transport stdio <package> -- npx -y <package>", "Install new MCP server", CommandCategory.CLAUDE),
+            Command("mcp3", "Remove MCP Server", "claude mcp remove <package>", "Uninstall MCP server", CommandCategory.CLAUDE),
 
-            // File Operations
-            Command("3", "List Files", "ls -la", "List all files", CommandCategory.FILE_OPERATIONS),
-            Command("4", "Search Code", "grep -r 'pattern' .", "Search in codebase", CommandCategory.SEARCH),
+            // File Operations with Claude
+            Command("file1", "Explain File", "cd \$CLAUDE_DIR && claude -p \"Explain @filepath\"", "Get explanation of specific file", CommandCategory.FILE_OPERATIONS),
+            Command("file2", "Analyze Directory", "cd \$CLAUDE_DIR && claude -p \"Analyze @directory\"", "Get structure of directory", CommandCategory.FILE_OPERATIONS),
 
-            // Build & Test
-            Command("5", "Build", "npm run build", "Build the project", CommandCategory.BUILD),
-            Command("6", "Test", "npm test", "Run tests", CommandCategory.TEST)
+            // Code Analysis
+            Command("code1", "Codebase Overview", "cd \$CLAUDE_DIR && claude -p \"Give me overview of this codebase\"", "Understand project structure", CommandCategory.SEARCH),
+            Command("code2", "Find Functionality", "cd \$CLAUDE_DIR && claude -p \"Where is X functionality?\"", "Locate specific features", CommandCategory.SEARCH),
+            Command("code3", "Trace Flow", "cd \$CLAUDE_DIR && claude -p \"Trace execution flow for X\"", "Understand code execution", CommandCategory.SEARCH)
         )
     }
 
@@ -443,6 +483,114 @@ class MainViewModel : ViewModel() {
                         CommandParameter("fqbn", "string", "Board identifier")
                     )),
                     PluginCommand("list", "List boards", emptyList())
+                )
+            ),
+            MCPPlugin(
+                id = "10",
+                name = "Compounding Engineering",
+                description = "AI-powered workflows for planning, building, and reviewing code. Makes each unit of work easier through systematic processes.",
+                packageName = "@EveryInc/every-marketplace/compounding-engineering",
+                repository = "https://github.com/EveryInc/every-marketplace",
+                category = PluginCategory.DEVELOPMENT,
+                commands = listOf(
+                    PluginCommand("plan", "Convert ideas into detailed GitHub issues", emptyList()),
+                    PluginCommand("work", "Execute plans using isolated worktrees", emptyList()),
+                    PluginCommand("review", "Multi-agent code review for security/performance", emptyList()),
+                    PluginCommand("triage", "Present findings for review", emptyList()),
+                    PluginCommand("resolve_todo_parallel", "Resolve multiple todos in parallel", emptyList()),
+                    PluginCommand("generate_command", "Create Claude Code commands", emptyList())
+                )
+            ),
+            MCPPlugin(
+                id = "11",
+                name = "Claude Code PM (CCPM)",
+                description = "Comprehensive project management with PRDs, epics, and GitHub integration. Spec-driven development with traceability.",
+                packageName = "ccpm",
+                repository = "https://github.com/automazeio/ccpm",
+                category = PluginCategory.AUTOMATION,
+                commands = listOf(
+                    PluginCommand("prd-new", "Create new PRD through brainstorming", emptyList()),
+                    PluginCommand("prd-list", "List all PRDs", emptyList()),
+                    PluginCommand("epic-decompose", "Break PRD into technical epics", emptyList()),
+                    PluginCommand("epic-sync", "Push epics to GitHub", emptyList()),
+                    PluginCommand("issue-start", "Start working on issue", emptyList()),
+                    PluginCommand("issue-close", "Complete and close issue", emptyList()),
+                    PluginCommand("next", "Get next task recommendation", emptyList()),
+                    PluginCommand("status", "Show project status", emptyList())
+                )
+            ),
+            MCPPlugin(
+                id = "12",
+                name = "Figma",
+                description = "Access Figma designs and components. Read design specs, extract assets, and sync design systems.",
+                packageName = "@modelcontextprotocol/server-figma",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.DEVELOPMENT,
+                commands = listOf(
+                    PluginCommand("get_file", "Get Figma file data", listOf(
+                        CommandParameter("file_key", "string", "Figma file key")
+                    )),
+                    PluginCommand("get_components", "List components in file", listOf(
+                        CommandParameter("file_key", "string", "Figma file key")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "13",
+                name = "Jira",
+                description = "Manage Jira tickets, epics, and sprints. Create issues, update status, and track project progress.",
+                packageName = "@modelcontextprotocol/server-jira",
+                repository = "https://github.com/modelcontextprotocol/servers",
+                category = PluginCategory.AUTOMATION,
+                commands = listOf(
+                    PluginCommand("create_issue", "Create new Jira issue", listOf(
+                        CommandParameter("project", "string", "Project key"),
+                        CommandParameter("summary", "string", "Issue summary"),
+                        CommandParameter("type", "string", "Issue type")
+                    )),
+                    PluginCommand("update_issue", "Update existing issue", listOf(
+                        CommandParameter("issue_key", "string", "Issue key"),
+                        CommandParameter("fields", "object", "Fields to update")
+                    )),
+                    PluginCommand("search_issues", "Search Jira issues", listOf(
+                        CommandParameter("jql", "string", "JQL query")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "14",
+                name = "Agents Framework",
+                description = "Multi-agent orchestration for Claude Code. Coordinate specialized agents for complex workflows.",
+                packageName = "agents",
+                repository = "https://github.com/wshobson/agents",
+                category = PluginCategory.AI_TOOLS,
+                commands = listOf(
+                    PluginCommand("create_agent", "Create new specialized agent", listOf(
+                        CommandParameter("name", "string", "Agent name"),
+                        CommandParameter("role", "string", "Agent role/specialty")
+                    )),
+                    PluginCommand("orchestrate", "Coordinate multiple agents", listOf(
+                        CommandParameter("task", "string", "Task to orchestrate")
+                    ))
+                )
+            ),
+            MCPPlugin(
+                id = "15",
+                name = "SpecWeaver",
+                description = "Spec-driven development with automated code review. Professional workflow for specification-first coding.",
+                packageName = "specweaver",
+                repository = "https://github.com/RoniLeor/specWeaver",
+                category = PluginCategory.DEVELOPMENT,
+                commands = listOf(
+                    PluginCommand("create_spec", "Create technical specification", listOf(
+                        CommandParameter("feature", "string", "Feature description")
+                    )),
+                    PluginCommand("implement", "Implement from spec", listOf(
+                        CommandParameter("spec_id", "string", "Specification ID")
+                    )),
+                    PluginCommand("review", "Review against spec", listOf(
+                        CommandParameter("spec_id", "string", "Specification ID")
+                    ))
                 )
             )
         )

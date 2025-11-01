@@ -44,6 +44,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val commandOutput by viewModel.commandOutput.collectAsState()
     val plugins by viewModel.plugins.collectAsState()
     val customRepos by viewModel.customRepos.collectAsState()
+    val terminalLines by viewModel.terminalLines.collectAsState()
+    val isExecuting by viewModel.isExecuting.collectAsState()
 
     var connectionConfig by remember { mutableStateOf(ConnectionConfig()) }
     var showCommandsDialog by remember { mutableStateOf<com.claude.codecompanion.data.MCPPlugin?>(null) }
@@ -97,11 +99,11 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
 
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Code, contentDescription = null) },
-                    label = { Text("Commands") },
-                    selected = currentRoute == "commands",
+                    icon = { Icon(Icons.Default.Terminal, contentDescription = null) },
+                    label = { Text("Terminal") },
+                    selected = currentRoute == "terminal",
                     onClick = {
-                        navController.navigate("commands") {
+                        navController.navigate("terminal") {
                             popUpTo("dashboard")
                         }
                     }
@@ -182,6 +184,19 @@ fun MainScreen(viewModel: MainViewModel) {
                     },
                     onToggleFavorite = { commandId ->
                         viewModel.toggleCommandFavorite(commandId)
+                    }
+                )
+            }
+
+            composable("terminal") {
+                TerminalScreen(
+                    terminalLines = terminalLines,
+                    isExecuting = isExecuting,
+                    onExecuteCommand = { command ->
+                        viewModel.executeTerminalCommand(command)
+                    },
+                    onClearTerminal = {
+                        viewModel.clearTerminal()
                     }
                 )
             }
