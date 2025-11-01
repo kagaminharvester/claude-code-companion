@@ -16,19 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class TerminalLine(
-    val text: String,
-    val type: LineType = LineType.OUTPUT,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
-enum class LineType {
-    COMMAND,
-    OUTPUT,
-    ERROR,
-    SUCCESS
-}
+import com.claude.codecompanion.data.TerminalLine
+import com.claude.codecompanion.data.LineType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

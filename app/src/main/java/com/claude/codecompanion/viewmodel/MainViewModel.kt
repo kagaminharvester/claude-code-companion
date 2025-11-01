@@ -36,8 +36,8 @@ class MainViewModel : ViewModel() {
     private val _customRepos = MutableStateFlow<List<CustomRepository>>(emptyList())
     val customRepos: StateFlow<List<CustomRepository>> = _customRepos.asStateFlow()
 
-    private val _terminalLines = MutableStateFlow<List<com.claude.codecompanion.ui.screens.TerminalLine>>(emptyList())
-    val terminalLines: StateFlow<List<com.claude.codecompanion.ui.screens.TerminalLine>> = _terminalLines.asStateFlow()
+    private val _terminalLines = MutableStateFlow<List<TerminalLine>>(emptyList())
+    val terminalLines: StateFlow<List<TerminalLine>> = _terminalLines.asStateFlow()
 
     private val _isExecuting = MutableStateFlow(false)
     val isExecuting: StateFlow<Boolean> = _isExecuting.asStateFlow()
@@ -80,9 +80,9 @@ class MainViewModel : ViewModel() {
             _isExecuting.value = true
 
             // Add command to terminal
-            _terminalLines.value = _terminalLines.value + com.claude.codecompanion.ui.screens.TerminalLine(
+            _terminalLines.value = _terminalLines.value + TerminalLine(
                 text = command,
-                type = com.claude.codecompanion.ui.screens.LineType.COMMAND
+                type = LineType.COMMAND
             )
 
             // Execute command
@@ -91,12 +91,12 @@ class MainViewModel : ViewModel() {
             // Add output to terminal
             val output = result.getOrNull() ?: result.exceptionOrNull()?.message ?: "Error"
             val lineType = if (result.isSuccess) {
-                com.claude.codecompanion.ui.screens.LineType.OUTPUT
+                LineType.OUTPUT
             } else {
-                com.claude.codecompanion.ui.screens.LineType.ERROR
+                LineType.ERROR
             }
 
-            _terminalLines.value = _terminalLines.value + com.claude.codecompanion.ui.screens.TerminalLine(
+            _terminalLines.value = _terminalLines.value + TerminalLine(
                 text = output,
                 type = lineType
             )

@@ -119,3 +119,16 @@ data class CustomRepository(
     val url: String,
     val addedDate: Long = System.currentTimeMillis()
 )
+
+data class TerminalLine(
+    val text: String,
+    val type: LineType = LineType.OUTPUT,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+enum class LineType {
+    COMMAND,
+    OUTPUT,
+    ERROR,
+    SUCCESS
+}
